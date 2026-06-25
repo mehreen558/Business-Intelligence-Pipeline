@@ -1,11 +1,11 @@
 # AI Customer Review Intelligence Platform
 
-A complete system that collects, analyzes, and extracts insights from customer reviews using AI (Claude/GPT) with FastAPI, Redis, and SQLite.
+A complete system that collects, analyzes, and extracts insights from customer reviews using OpenAI with FastAPI, Redis, and SQLite.
 
 ## Features
 
 - **Review Ingestion** - Accept reviews from multiple sources (Shopify, Amazon, etc.)
-- **AI Analysis** - Sentiment analysis, topic extraction, entity recognition via Claude/OpenAI
+- **AI Analysis** - Sentiment analysis, topic extraction, entity recognition via OpenAI
 - **Async Processing** - Redis queue with worker workers for non-blocking operations
 - **Structured Output** - JSON responses from AI with confidence scores
 - **SQLite Storage** - Lightweight database with JSON support for flexible schemas
