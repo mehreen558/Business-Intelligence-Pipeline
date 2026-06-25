@@ -21,13 +21,13 @@ class ReviewIngestRequest(BaseModel):
     review_date: Optional[datetime] = Field(None, description="Date of review")
 
 class ReviewIngestResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     status: str
     message: str
     queue_position: Optional[int] = None
 
 class AnalysisResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     sentiment: Optional[str]
     urgency: Optional[str]
     summary: Optional[str]
@@ -36,7 +36,7 @@ class AnalysisResponse(BaseModel):
     processed_at: Optional[datetime]
 
 class ReviewResponse(BaseModel):
-    id: str
+    id: uuid.UUID
     source: str
     external_id: Optional[str]
     rating: Optional[int]
@@ -46,7 +46,7 @@ class ReviewResponse(BaseModel):
     analysis: Optional[AnalysisResponse]
 
 class JobStatusResponse(BaseModel):
-    review_id: str
+    review_id: uuid.UUID
     status: str
     attempts: int
     error_message: Optional[str]
@@ -119,7 +119,8 @@ async def get_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     
-    analysis = await db.get(ReviewAnalysis, review_id)
+    analysis_result = await db.execute(select(ReviewAnalysis).where(ReviewAnalysis.review_id == review_id))
+    analysis = analysis_result.scalars().first()
     
     response = ReviewResponse(
         id=review.id,
@@ -153,7 +154,8 @@ async def get_job_status(
     """
     Get the processing status of a review.
     """
-    job = await db.get(ProcessingJob, review_id)
+    result = await db.execute(select(ProcessingJob).where(ProcessingJob.review_id == review_id))
+    job = result.scalars().first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -192,7 +194,8 @@ async def list_reviews(
     
     review_responses = []
     for review in reviews:
-        analysis = await db.get(ReviewAnalysis, review.id)
+        analysis_result = await db.execute(select(ReviewAnalysis).where(ReviewAnalysis.review_id == review.id))
+        analysis = analysis_result.scalars().first()
         
         review_response = ReviewResponse(
             id=review.id,

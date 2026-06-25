@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     API_VERSION: str = "1.0.0"
     
+    # API Keys
+    OPENAI_API_KEY: str = ""
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -10,7 +10,7 @@ if settings.DATABASE_URL.startswith("sqlite"):
     engine = create_async_engine(
         DATABASE_URL,
         echo=settings.DEBUG,
-        connect_args={"check_same_thread": False}  # Required for SQLite
+        connect_args={"check_same_thread": False}
     )
 else:
     # PostgreSQL setup
@@ -29,7 +29,6 @@ AsyncSessionLocal = sessionmaker(
 )
 
 async def get_db():
-    """Dependency for FastAPI to get database session"""
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -37,10 +36,8 @@ async def get_db():
             await session.close()
 
 async def init_db():
-    """Initialize database tables"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
 async def close_db():
-    """Close database connections"""
     await engine.dispose()

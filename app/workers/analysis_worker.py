@@ -4,19 +4,19 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 from app.models.review import Review, ReviewAnalysis, ProcessingJob
+from app.services.ai_services import get_ai_service
 
 logger = logging.getLogger(__name__)
 
-# Database setup for worker (sync version for RQ)
+# Database setup for worker
 sync_engine = create_engine(settings.DATABASE_URL)
 SyncSessionLocal = sessionmaker(bind=sync_engine)
 
 def process_review(review_id: str):
     """
-    Process a single review.
-    For Week 1, this is a mock implementation that simulates AI analysis.
+    Process a review using OpenAI
     """
-    logger.info(f"Processing review: {review_id}")
+    logger.info(f" Processing review: {review_id}")
     
     db = SyncSessionLocal()
     
@@ -38,8 +38,15 @@ def process_review(review_id: str):
             job.attempts += 1
             db.commit()
         
-        # 3. Simulate AI analysis (Week 1: mock analysis)
-        analysis_result = mock_analyze_review(review.review_text)
+        # 3. Analyze with OpenAI
+        logger.info(f"Sending to OpenAI...")
+        ai_service = get_ai_service()
+        analysis_result = ai_service.analyze_review(review.review_text)
+        
+        logger.info(f"AI analysis complete for {review_id}")
+        logger.info(f"   Sentiment: {analysis_result.get('sentiment')}")
+        logger.info(f"   Topics: {analysis_result.get('topics')}")
+        logger.info(f"   Confidence: {analysis_result.get('confidence')}")
         
         # 4. Save analysis results
         analysis = ReviewAnalysis(
@@ -48,6 +55,7 @@ def process_review(review_id: str):
             urgency=analysis_result.get("urgency"),
             summary=analysis_result.get("summary"),
             topics=analysis_result.get("topics", []),
+            entities=analysis_result.get("entities", {}),
             confidence=analysis_result.get("confidence", 0.0)
         )
         db.add(analysis)
@@ -72,63 +80,3 @@ def process_review(review_id: str):
         raise
     finally:
         db.close()
-
-def mock_analyze_review(review_text: str) -> dict:
-    """
-    Mock AI analysis for Week 1.
-    Returns simulated analysis results.
-    """
-    text_lower = review_text.lower()
-    
-    # Sentiment detection (very basic)
-    positive_words = ['good', 'great', 'excellent', 'amazing', 'love', 'best', 'perfect', 'recommend']
-    negative_words = ['bad', 'poor', 'terrible', 'awful', 'worst', 'hate', 'disappointed', 'broken']
-    
-    positive_score = sum(1 for word in positive_words if word in text_lower)
-    negative_score = sum(1 for word in negative_words if word in text_lower)
-    
-    if positive_score > negative_score:
-        sentiment = "positive"
-    elif negative_score > positive_score:
-        sentiment = "negative"
-    else:
-        sentiment = "neutral"
-    
-    # Topic detection (basic)
-    topics = []
-    topic_keywords = {
-        'shipping': ['shipping', 'delivery', 'arrive', 'ship', 'courier', 'fedex', 'ups'],
-        'quality': ['quality', 'durable', 'sturdy', 'well-made', 'material'],
-        'pricing': ['price', 'cost', 'expensive', 'cheap', 'value', 'money'],
-        'customer_service': ['support', 'help', 'service', 'representative', 'agent'],
-        'returns': ['return', 'refund', 'exchange', 'money back'],
-        'packaging': ['packaging', 'box', 'wrap', 'bubble', 'package'],
-    }
-    
-    for topic, keywords in topic_keywords.items():
-        if any(keyword in text_lower for keyword in keywords):
-            topics.append(topic)
-    
-    # Urgency detection (basic)
-    urgency = "low"
-    high_urgency = ['urgent', 'immediately', 'asap', 'emergency', 'critical']
-    medium_urgency = ['soon', 'quickly', 'as soon']
-    
-    if any(word in text_lower for word in high_urgency):
-        urgency = "high"
-    elif any(word in text_lower for word in medium_urgency):
-        urgency = "medium"
-    
-    # Generate summary
-    if topics:
-        summary = f"Customer mentioned: {', '.join(topics)}. Overall sentiment: {sentiment}."
-    else:
-        summary = f"Customer provided feedback. Overall sentiment: {sentiment}."
-    
-    return {
-        "sentiment": sentiment,
-        "urgency": urgency,
-        "topics": topics[:3],
-        "summary": summary[:200],
-        "confidence": 0.85
-    }

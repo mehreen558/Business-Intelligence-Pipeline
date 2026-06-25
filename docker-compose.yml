@@ -1,8 +1,7 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
+    container_name: review_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -16,9 +15,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - review_network
 
   redis:
     image: redis:7-alpine
+    container_name: review_redis
     ports:
       - "6379:6379"
     volumes:
@@ -28,11 +30,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - review_network
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: review_api
     ports:
       - "8000:8000"
     environment:
@@ -47,11 +52,14 @@ services:
     volumes:
       - ./app:/app/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - review_network
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: review_worker
     environment:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/reviews
       REDIS_URL: redis://redis:6379/0
@@ -60,10 +68,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: rq worker analysis --url redis://redis:6379/0
     volumes:
       - ./app:/app/app
+    command: rq worker analysis --url redis://redis:6379/0
+    networks:
+      - review_network
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  review_network:
+    driver: bridge
