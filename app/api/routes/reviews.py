@@ -10,6 +10,9 @@ from app.core.database import get_db
 from app.models.review import Review, ReviewAnalysis, ProcessingJob
 from app.core.queue import get_analysis_queue
 
+from app.services.trend_service import TrendService
+from datetime import datetime, timedelta
+
 router = APIRouter()
 
 # ----- Request/Response Models -----
@@ -261,3 +264,135 @@ async def get_summary_stats(db: AsyncSession = Depends(get_db)):
         "processed": processed,
         "pending": total_reviews - processed
     }
+
+
+# trend APIs
+
+@router.get("/trends/sentiment")
+async def get_sentiment_trend(
+    days: int = 30,
+    interval: str = "day",
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get sentiment trends over time
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.get_sentiment_trend(days, interval)
+    return result
+
+@router.get("/trends/topics")
+async def get_topic_trends(
+    days: int = 30,
+    top_n: int = 10,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get trending topics
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.get_topic_trends(days, top_n)
+    return result
+
+@router.get("/trends/anomalies")
+async def detect_anomalies(
+    days: int = 30,
+    threshold: float = 2.0,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Detect anomalies in review patterns
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.detect_anomalies(days, threshold)
+    return result
+
+@router.get("/trends/emerging")
+async def get_emerging_issues(
+    lookback_days: int = 30,
+    compare_days: int = 7,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get emerging issues based on topic growth
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.get_emerging_issues(lookback_days, compare_days)
+    return result
+
+@router.get("/trends/summary")
+async def get_trend_summary(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get comprehensive trend summary report
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.get_summary_report(days)
+    return result
+
+@router.get("/trends/weekly")
+async def get_weekly_report(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get weekly report (last 7 days)
+    """
+    trend_service = TrendService(db)
+    result = await trend_service.get_summary_report(7)
+    return result
+
+
+# weekly report endpoints 
+@router.get("/reports/weekly")
+async def get_weekly_report(db: AsyncSession = Depends(get_db)):
+    """
+    Generate a weekly report with key insights
+    """
+    trend_service = TrendService(db)
+    
+    # Get data for the week
+    days = 7
+    summary = await trend_service.get_summary_report(days)
+    sentiment_trend = await trend_service.get_sentiment_trend(days)
+    anomalies = await trend_service.detect_anomalies(days)
+    emerging = await trend_service.get_emerging_issues(days)
+    
+    return {
+        'period': {
+            'start': (datetime.now() - timedelta(days=days)).strftime('%Y-%m-%d'),
+            'end': datetime.now().strftime('%Y-%m-%d')
+        },
+        'summary': summary,
+        'trend': sentiment_trend['data'],
+        'anomalies': anomalies,
+        'emerging_issues': emerging,
+        'recommendations': generate_recommendations(summary, emerging, anomalies)
+    }
+
+def generate_recommendations(summary, emerging, anomalies) -> List[str]:
+    """Generate actionable recommendations"""
+    recommendations = []
+    
+    # Based on sentiment
+    if summary['overall_sentiment']['negative'] > 30:
+        recommendations.append("Address negative feedback by reviewing recent complaints")
+    
+    if summary['overall_sentiment']['positive'] > 70:
+        recommendations.append("Leverage positive feedback in marketing materials")
+    
+    # Based on emerging issues
+    for issue in emerging[:3]:
+        if issue['growth_percent'] > 100:
+            recommendations.append(f"Investigate rapid increase in {issue['topic']} complaints")
+    
+    # Based on anomalies
+    for anomaly in anomalies:
+        if anomaly['deviation'] == 'above':
+            recommendations.append(f"High review volume on {anomaly['date']} - investigate cause")
+    
+    if not recommendations:
+        recommendations.append("No urgent actions needed. Continue monitoring trends.")
+    
+    return recommendations
