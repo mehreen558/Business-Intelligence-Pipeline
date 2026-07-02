@@ -21,78 +21,66 @@ A complete system that collects, analyzes, and extracts insights from customer r
 - Claude/OpenAI APIs
 - Pydantic for validation
 
-## Quick Start
+
+## **Quick Start**
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/mehreen558/Business-Intelligence-Pipeline.git
+cd Business-Intelligence-Pipeline
+```
+
+### 2. Start Backend (Docker)
+```bash
+docker compose up -d
+```
+
+### 3. Start Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 4. Access the Application
+- **Frontend**: http://localhost:3000
+- **API**: http://localhost:8000/docs
+
+---
+
+## 📋 **Prerequisites**
+
+- Docker Desktop
+- Node.js 18+
+- Python 3.11+
+
+---
+
+## 🛠️ **Development Mode**
 
 ```bash
-# Clone
-git clone <repository-url>
-cd ai-review-intelligence
-
-# Setup
+# Backend (without Docker)
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+uvicorn app.main:app --reload
 
-# Environment
-cp .env.example .env
-# Add your API keys to .env
-
-# Initialize DB
-python scripts/init_db.py
-
-# Start services (3 terminals)
-redis-server                          # Terminal 1
-uvicorn app.main:app --reload        # Terminal 2  
-python app/worker.py                  # Terminal 3
+# Frontend
+cd frontend
+npm run dev
 ```
 
-## Environment Variables
+---
+
+##  **Environment Variables**
+
+Create `.env` file in root:
 
 ```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/reviews
 REDIS_URL=redis://localhost:6379/0
-DATABASE_URL=sqlite:///./reviews.db
-API_PORT=8000
-```
-
-## Project Structure
-
-```
-.
-├── app/
-│   ├── api/           # FastAPI routes
-│   ├── core/          # Config & dependencies
-│   ├── models/        # SQLAlchemy models
-│   ├── schemas/       # Pydantic schemas
-│   ├── services/      # Business logic
-│   ├── workers/       # RQ worker functions
-│   └── utils/         # Helpers
-├── scripts/           # Management scripts
-├── tests/             # Unit tests
-├── requirements.txt
-├── docker-compose.yml
-└── .env.example
-```
-## Deployment
-
-### Docker
-```bash
-docker-compose up -d
-docker-compose up -d --scale worker=4
-```
-
-### Production Checklist
-- [ ] Set environment variables
-- [ ] Configure logging
-- [ ] Setup database backups
-- [ ] Enable HTTPS
-- [ ] Implement rate limiting
-- [ ] Add monitoring
-
-## Testing
-
-```bash
-pytest
-pytest --cov=app tests/
+OPENAI_API_KEY=your_key_here
+AI_PROVIDER=openai
 ```
 
 ## License
