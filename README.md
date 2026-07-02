@@ -27,7 +27,7 @@ A complete system that collects, analyzes, and extracts insights from customer r
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/mehreen558/Business-Intelligence-Pipeline.git
-cd Business-Intelligence-Pipeline
+cd CustomerReviews-Pipeline
 ```
 
 ### 2. Start Backend (Docker)
